@@ -42,7 +42,10 @@ deploy:
   file: vlc-*-macosx.zip
   file_glob: true
   skip_cleanup: true
+  tag_name: $TRAVIS_TAG
   on:
     condition: $TARGET == macOS
     repo: nurupo/vlc-pause-click-plugin
+    on_tag: false
     all_branches: true
+    draft: true
