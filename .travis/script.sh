@@ -58,6 +58,7 @@ elif [ "$TARGET" = "macOS" ]; then
   mv vlc-$VLC_VERSION.0-win32/*/sdk/include/vlc/plugins include/vlc/plugins
   mv vlc-$VLC_VERSION.0-win32/*/sdk/lib/pkgconfig lib/pkgconfig
   rm -rf ./vlc-$VLC_VERSION.0-win32
+  grep LIBVLC_VERSION_MAJOR include/* -R
   # fix paths in .pc files
   sed -i "" "s|^prefix=.*|prefix=$PWD|g" lib/pkgconfig/*.pc
   export PKG_CONFIG_PATH="${PWD}/lib/pkgconfig"
