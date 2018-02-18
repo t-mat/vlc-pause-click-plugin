@@ -95,6 +95,7 @@ static void CloseInterface(vlc_object_t *);
 
 
 static intf_thread_t *p_intf = NULL;
+static filter_t *p_filter = NULL;
 
 static vlc_timer_t timer;
 static bool timer_initialized = false;
@@ -134,11 +135,15 @@ vlc_module_end()
 
 static void pause_play(void)
 {
+
+    msg_Info(p_filter, "pause_play 1: %p", p_intf);
     if (p_intf == NULL) {
+        msg_Info(p_filter, "pause_play 2");
         return;
     }
 
     playlist_t* p_playlist = pl_Get(p_intf);
+    msg_Info(p_filter, "pause_play 3: %p, %d", p_playlist, playlist_Status(p_playlist));
     playlist_Control(p_playlist,
                      (playlist_Status(p_playlist) == PLAYLIST_RUNNING ? PLAYLIST_PAUSE : PLAYLIST_PLAY), 0);
 }
@@ -148,10 +153,15 @@ static void timer_callback(void* data)
     UNUSED(data);
 
     if (!atomic_load(&timer_scheduled)) {
+        msg_Info(p_filter, "timer_callback 1");
         return;
     }
 
+    msg_Info(p_filter, "timer_callback 2");
+
     pause_play();
+
+    msg_Info(p_filter, "timer_callback 3");
 
     atomic_store(&timer_scheduled, false);
 }
@@ -165,33 +175,48 @@ static int mouse(filter_t *p_filter, vlc_mouse_t *p_mouse_out, const vlc_mouse_t
         return VLC_EGENERIC;
     }
 
+    msg_Info(p_filter, "mouse 1");
+
     // get mouse button from settings. updates if user changes the setting
     char *mouse_button_value = var_InheritString(p_filter, MOUSE_BUTTON_SETTING);
     if (mouse_button_value == NULL) {
+        msg_Info(p_filter, "mouse 2 error");
         return VLC_EGENERIC;
     }
+    msg_Info(p_filter, "mouse 3 mouse_button_value: %c", *mouse_button_value);
     int mouse_button = FROM_CHAR(mouse_button_value[0]);
+    msg_Info(p_filter, "mouse 4 mouse_button: %d", mouse_button);
     free(mouse_button_value);
+
+    msg_Info(p_filter, "mouse 5: %d", vlc_mouse_HasPressed(p_mouse_old, p_mouse_new, mouse_button));
+    msg_Info(p_filter, "mouse 6: %d, %d, %d", p_mouse_new->b_double_click, mouse_button == MOUSE_BUTTON_LEFT, MOUSE_BUTTON_LEFT);
 
     if (vlc_mouse_HasPressed(p_mouse_old, p_mouse_new, mouse_button) ||
             // on some systems (e.g. Linux) b_double_click is not set for a double-click, so we track any click and
             // decide if it was a double click on our own. This provides the most uniform cross-platform behaviour.
             (p_mouse_new->b_double_click && mouse_button == MOUSE_BUTTON_LEFT)) {
         // if ignoring double click
+        msg_Info(p_filter, "mouse 7: %d", var_InheritBool(p_filter, DOUBLE_CLICK_ENABLED_SETTING));
+        msg_Info(p_filter, "mouse 8: %d", timer_initialized);
         if (var_InheritBool(p_filter, DOUBLE_CLICK_ENABLED_SETTING) && timer_initialized) {
+            msg_Info(p_filter, "mouse 9: %d", atomic_load(&timer_scheduled));
             if (atomic_load(&timer_scheduled)) {
                 // it's a double click -- cancel the scheduled pause/play, if any
                 atomic_store(&timer_scheduled, false);
                 vlc_timer_schedule(timer, false, 0, 0);
+                msg_Info(p_filter, "mouse 10");
             } else {
                 // it might be a single click -- schedule pause/play call
                 atomic_store(&timer_scheduled, true);
+                msg_Info(p_filter, "mouse 11: %ld", var_InheritInteger(p_filter, DOUBLE_CLICK_DELAY_SETTING)*1000);
                 vlc_timer_schedule(timer, false, var_InheritInteger(p_filter, DOUBLE_CLICK_DELAY_SETTING)*1000, 0);
             }
         } else {
+            msg_Info(p_filter, "mouse 12");
             pause_play();
         }
     }
+    msg_Info(p_filter, "mouse 13");
 
     // don't propagate any mouse change
     return VLC_EGENERIC;
@@ -207,16 +232,21 @@ static picture_t *filter(filter_t *p_filter, picture_t *p_pic_in)
 
 static int OpenFilter(vlc_object_t *p_this)
 {
-    filter_t *p_filter = (filter_t *)p_this;
+    p_filter = (filter_t *)p_this;
+
+    msg_Info(p_filter, "OpenFilter 1");
 
     p_filter->pf_video_filter = filter;
     p_filter->pf_video_mouse = mouse;
 
     if (vlc_timer_create(&timer, &timer_callback, NULL)) {
+        msg_Info(p_filter, "OpenFilter 2 error");
         return VLC_EGENERIC;
     }
     timer_initialized = true;
     atomic_store(&timer_scheduled, false);
+
+    msg_Info(p_filter, "OpenFilter 3 success");
 
     return VLC_SUCCESS;
 }
@@ -224,6 +254,8 @@ static int OpenFilter(vlc_object_t *p_this)
 static void CloseFilter(vlc_object_t *p_this)
 {
     UNUSED(p_this);
+
+    msg_Info(p_filter, "CloseFilter timer_initialized: %d", timer_initialized);
 
     if (timer_initialized) {
         vlc_timer_destroy(timer);
@@ -236,12 +268,16 @@ static int OpenInterface(vlc_object_t *p_this)
 {
     p_intf = (intf_thread_t*) p_this;
 
+    msg_Info(p_intf, "OpenInterface");
+
     return VLC_SUCCESS;
 }
 
 static void CloseInterface(vlc_object_t *p_this)
 {
     UNUSED(p_this);
+
+    msg_Info(p_intf, "CloseInterface");
 
     p_intf = NULL;
 }

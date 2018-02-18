@@ -45,4 +45,3 @@ deploy:
   on:
     condition: $TARGET == macOS
     repo: nurupo/vlc-pause-click-plugin
-    tags: true
