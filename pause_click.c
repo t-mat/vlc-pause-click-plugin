@@ -193,6 +193,13 @@ static int mouse(filter_t *p_filter, vlc_mouse_t *p_mouse_out, const vlc_mouse_t
         }
     }
 
+    // prevent fullscreen from toggling on left click
+    if (p_mouse_new->b_double_click && mouse_button == MOUSE_BUTTON_LEFT) {
+        *p_mouse_out = *p_mouse_new;
+        p_mouse_out->b_double_click = 0;
+        return VLC_SUCCESS;
+    }
+
     // don't propagate any mouse change
     return VLC_EGENERIC;
 }
