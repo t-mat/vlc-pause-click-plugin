@@ -193,6 +193,13 @@ static int mouse(filter_t *p_filter, vlc_mouse_t *p_mouse_out, const vlc_mouse_t
         }
     }
 
+    // prevent the context menu in Qt GUI from appearing
+    if (mouse_button == MOUSE_BUTTON_RIGHT && vlc_mouse_IsPressed(p_mouse_new, MOUSE_BUTTON_RIGHT)) {
+        *p_mouse_out = *p_mouse_new;
+        p_mouse_out->i_pressed = 0;
+        return VLC_SUCCESS;
+    }
+
     // don't propagate any mouse change
     return VLC_EGENERIC;
 }
