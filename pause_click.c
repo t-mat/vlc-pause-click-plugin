@@ -200,6 +200,13 @@ static int mouse(filter_t *p_filter, vlc_mouse_t *p_mouse_out, const vlc_mouse_t
         return VLC_SUCCESS;
     }
 
+    // toggle fullscreen on middle click
+    if (vlc_mouse_HasPressed(p_mouse_old, p_mouse_new, MOUSE_BUTTON_CENTER)) {
+        *p_mouse_out = *p_mouse_new;
+        p_mouse_out->b_double_click = 1;
+        return VLC_SUCCESS;
+    }
+
     // don't propagate any mouse change
     return VLC_EGENERIC;
 }
